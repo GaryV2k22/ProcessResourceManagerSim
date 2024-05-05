@@ -1,11 +1,12 @@
 #include <iostream>
-#include "../headers/Manager.h"
-
+#include "../headers/Shell.h"
 
 
 int main(){
 
+    Shell shell;
 
+    shell.run();
 
     return 0;
 }

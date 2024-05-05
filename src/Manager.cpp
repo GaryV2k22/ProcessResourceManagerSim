@@ -15,21 +15,21 @@ bool Manager::init(int n, int u0, int u1, int u2, int u3) {
     
     // List with specified number of priority levels
     this->readyList.setLevels(n); 
-
+    
     // Initialize with a default process
     create(0); // Assuming the initial process is always at priority 0
-
+    this->currentProcess=0;
     return true;
 }
 
 bool Manager::init_default() {
     return init(3, 1, 1, 2, 3); // Default initialization parameters
 }
-
+ 
 
 
 bool Manager::create(int priority) {
-    if (pcbArray.size() >= 16) {
+    if (pcbArray.size() >= 16 && numProcesses == 16) {
         std::cerr << "Maximum number of processes reached." << std::endl;
         return false;
     }
@@ -39,23 +39,35 @@ bool Manager::create(int priority) {
         return false;
     }
 
-    PCB newPCB = {getNextAvailablePID(), priority, 1, this->currentProcess};
+
+    int next_available = getNextAvailablePID();
+    PCB newPCB = PCB(next_available, priority, 1, this->currentProcess);
+
     pcbArray[newPCB.pid] = newPCB;
     readyList.insert(priority, newPCB.pid);
+
+    std::cout << "Creating process, parent PID: " << newPCB.parent << std::endl;
     if (newPCB.parent != -1) {
-        pcbArray[newPCB.parent].children.push_back(newPCB.pid);
+        if (newPCB.parent >= pcbArray.size()) {
+            std::cerr << "Error: Parent PID out of bounds." << std::endl;
+        } else {
+            pcbArray[newPCB.parent].children.push_back(newPCB.pid);
+            std::cout << "Added child PID " << newPCB.pid << " to parent PID " << newPCB.parent << std::endl;
+        }
     }
+    
     std::cout << "Process " << newPCB.pid << " created with priority " << priority << std::endl;
     if (priority > pcbArray[currentProcess].priority) {
         scheduler();
     }
+    numProcesses++;
     return true;
 }
 
 
 bool Manager::destroy(int pid) {
     //if pid is not valid
-    if (pid < 0 || pid >= pcbArray.size() || pcbArray[pid].pid == -1 || pcbArray[pid].pid == 2) {
+    if (pid < 0 || pid >= pcbArray.size() || pcbArray[pid].pid == -1 || pcbArray[pid].state == 2) {
         std::cerr << "Invalid process ID." << std::endl;
         return false;
     }
@@ -81,7 +93,9 @@ bool Manager::destroy(int pid) {
     // remove the process from the list of children of the parent
     pcbArray[pcbArray[pid].parent].children.erase(std::remove(pcbArray[pcbArray[pid].parent].children.begin(), pcbArray[pcbArray[pid].parent].children.end(), pid), pcbArray[pcbArray[pid].parent].children.end());
 
+    numProcesses--;
     scheduler();
+    return true;
 
 }
 
@@ -104,7 +118,6 @@ void Manager::scheduler() {
     int nextProcess = readyList.getHighestPriorityProcess();
     this->currentProcess = nextProcess;
 
-    std::cout << "Current Process" << currentProcess;
 }
 
 void Manager::timeout(){

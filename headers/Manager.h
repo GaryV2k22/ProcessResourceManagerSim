@@ -10,14 +10,16 @@
 
 class Manager {
 
-private:
+// private:
+
+public:
     std::vector<PCB> pcbArray;
     std::vector<RCB> rcbArray;
     RL readyList;
+    int numProcesses;
     int currentProcess;
 
-public:
-    
+
     Manager() : pcbArray(16), rcbArray(4), readyList(3) {
         currentProcess = -1;
     }
@@ -29,6 +31,7 @@ public:
     bool destroy(int pid);
     bool request(int pid, int rid, int units);
     bool release(int pid, int rid, int units);
+
     void timeout();
     void scheduler();
 

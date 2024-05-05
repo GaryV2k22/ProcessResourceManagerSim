@@ -11,7 +11,11 @@
 class Shell {
 public:
     void run();
+    Shell() : os_manager() {};
+
 private:
     Manager os_manager; // Instance of the operating system manager
+
+
     void parseCommand(const std::string& command);
 };
