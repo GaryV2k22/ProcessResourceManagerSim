@@ -81,7 +81,7 @@ bool Manager::destroy(int pid) {
     // remove the process from the list of children of the parent
     pcbArray[pcbArray[pid].parent].children.erase(std::remove(pcbArray[pcbArray[pid].parent].children.begin(), pcbArray[pcbArray[pid].parent].children.end(), pid), pcbArray[pcbArray[pid].parent].children.end());
 
-
+    scheduler();
 
 }
 
