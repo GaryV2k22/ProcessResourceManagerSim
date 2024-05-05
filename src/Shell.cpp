@@ -1,5 +1,5 @@
 #include "Shell.h"
-#include "Manager.h"
+
 
 void Shell::run() {
     std::string command;
@@ -38,7 +38,7 @@ void Shell::parseCommand(const std::string& command) {
         if (!(iss >> rid >> units)) {
             std::cout << "* Error: Resource ID and units must be specified\n";
         } else {
-            bool success = os_manager.request(rid, units);
+            bool success = os_manager.request(os_manager.getCurrentProcess(), rid, units);
             if (success) {
                 std::cout << "* resource " << rid << " allocated\n";
             } else {
@@ -50,7 +50,7 @@ void Shell::parseCommand(const std::string& command) {
         if (!(iss >> rid >> units)) {
             std::cout << "* Error: Resource ID and units must be specified\n";
         } else {
-            bool success = os_manager.release(rid, units);
+            bool success = os_manager.release( os_manager.getCurrentProcess() ,rid, units);
             if (success) {
                 std::cout << "* resource " << rid << " released\n";
             } else {
@@ -61,7 +61,7 @@ void Shell::parseCommand(const std::string& command) {
         os_manager.timeout();
         std::cout << "* timeout\n";
     } else if (cmd == "in") {
-        os_manager.init();
+        os_manager.init_default();
         std::cout << "* system initialized\n";
     } else {
         std::cout << "* Unknown command\n";

@@ -1,5 +1,13 @@
 #pragma once
 
+#include <string>
+#include <iostream>
+#include <sstream>
+
+
+#include "Manager.h"
+
+
 class Shell {
 public:
     void run();
