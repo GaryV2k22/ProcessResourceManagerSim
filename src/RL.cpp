@@ -8,7 +8,7 @@ void RL::setLevels(int n) {
 
 
 int RL::getLevels() {
-    return levels.size();
+    return levels.size() ;
 }
 
 

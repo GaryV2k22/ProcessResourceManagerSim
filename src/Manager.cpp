@@ -30,12 +30,10 @@ bool Manager::init_default() {
 
 bool Manager::create(int priority) {
     if (pcbArray.size() >= 16 && numProcesses == 16) {
-        std::cerr << "Maximum number of processes reached." << std::endl;
         return false;
     }
     //if priority is not between 0 and levels.size() - 1
     if (priority < 0 || priority >= readyList.getLevels()) {
-        std::cerr << "Invalid priority level." << std::endl;
         return false;
     }
 
@@ -46,17 +44,15 @@ bool Manager::create(int priority) {
     pcbArray[newPCB.pid] = newPCB;
     readyList.insert(priority, newPCB.pid);
 
-    std::cout << "Creating process, parent PID: " << newPCB.parent << std::endl;
     if (newPCB.parent != -1) {
         if (newPCB.parent >= pcbArray.size()) {
-            std::cerr << "Error: Parent PID out of bounds." << std::endl;
+            return false;
         } else {
             pcbArray[newPCB.parent].children.push_back(newPCB.pid);
-            std::cout << "Added child PID " << newPCB.pid << " to parent PID " << newPCB.parent << std::endl;
+
         }
     }
     
-    std::cout << "Process " << newPCB.pid << " created with priority " << priority << std::endl;
     if (priority > pcbArray[currentProcess].priority) {
         scheduler();
     }
@@ -65,42 +61,66 @@ bool Manager::create(int priority) {
 }
 
 
-bool Manager::destroy(int pid) {
-    //if pid is not valid
+bool Manager::destroy(int pid, int actingCurrentProcess = -1) {
+    if (actingCurrentProcess == -1) {
+        actingCurrentProcess = currentProcess;
+    }
+
+    // Validate PID is within range and not already terminated or uninitialized
     if (pid < 0 || pid >= pcbArray.size() || pcbArray[pid].pid == -1 || pcbArray[pid].state == 2) {
-        std::cerr << "Invalid process ID." << std::endl;
+        return false;
+    }
+    std::cout << "Acting Current Proc: " << actingCurrentProcess << "\n";
+    
+    // Ensure the PID to be destroyed is either the acting current process or a child of it
+    if (std::find(pcbArray[actingCurrentProcess].children.begin(), pcbArray[actingCurrentProcess].children.end(), pid) == pcbArray[actingCurrentProcess].children.end() && pid != actingCurrentProcess) {
+        std::cout << "process " << pid << " cannot be deleted\n";
         return false;
     }
 
-    // if the pid is not in the list of children of the current process or the current process
-    if (std::find(pcbArray[currentProcess].children.begin(), pcbArray[currentProcess].children.end(), pid) == pcbArray[currentProcess].children.end() && pid != currentProcess) {
-        std::cerr << "Process " << pid << " is not a child of the current process." << std::endl;
-        return false;
+    std::cout << "\n currently trying to delete " << pid << "\n";
+    
+    // Recursively destroy all children of the process (safe handling if children array changes)
+    std::vector<int> children = pcbArray[pid].children; // Copy to handle modification during iteration
+    for (int childPid : children) {
+        std::cout << "CHILD: " << childPid << "\n";
+        destroy(childPid, pid);  // Recursive call with updated acting current process
     }
 
-    // if we are deleting the current process destroy the children
-    if (pid == currentProcess) {
-        for (int child : pcbArray[pid].children) {
-            destroy(child);
-        }
-    }
-
-    // release all resources held by the process
-    for (int i = 0; i < pcbArray[pid].resources.size(); i++) {
+    
+    // Release all resources held by the process
+    for (size_t i = 0; i < pcbArray[pid].resources.size(); ++i) {
         release(pid, i, pcbArray[pid].resources[i]);
+        std::cout << "PID\'s "<< pid << pcbArray[pid].resources[i]; 
     }
 
-    // remove the process from the list of children of the parent
-    pcbArray[pcbArray[pid].parent].children.erase(std::remove(pcbArray[pcbArray[pid].parent].children.begin(), pcbArray[pcbArray[pid].parent].children.end(), pid), pcbArray[pcbArray[pid].parent].children.end());
+    std::cout << "PAST THE RELEASE! \n";
+    pcbArray[pid].resources = {0,0,0,0};
 
+    // Remove the process from the children list of its parent
+    if (pcbArray[pid].parent != -1) {
+        auto& parents_children = pcbArray[pcbArray[pid].parent].children;
+        parents_children.erase(std::remove(parents_children.begin(), parents_children.end(), pid), parents_children.end());
+    }
+
+    // Mark the process as terminated
+    pcbArray[pid].state = 2; // Assuming 2 represents a terminated state
+
+    // If destroying the current process, need to select a new one
+    if (pid == currentProcess) {
+        currentProcess = -1; // Or set to a valid default PID if available
+        scheduler(); // This should handle setting a new currentProcess
+    }
+
+    // Decrease the count of processes
     numProcesses--;
-    scheduler();
+    std::cout << "FINISHED DESTROYING " << pid << "\n";
     return true;
-
 }
 
 
-// not done
+
+
 // suggested to make the scheduler
 // do a context switch when the current process is not
 // the highest priority process i.e. head of priority list
@@ -129,9 +149,9 @@ void Manager::timeout(){
 
 
 bool Manager::request(int pid, int rid, int units) {
+
     // Check if the process is requesting a valid amount of units
     if(units < 0 || units > rcbArray[rid].inventory || units + pcbArray[pid].resources[rid] > rcbArray[rid].inventory ) {
-        std::cerr << "Invalid number of units requested." << std::endl;
         return false;
     }
 
@@ -153,26 +173,28 @@ bool Manager::release(int pid, int rid, int units) {
 
     // Check if the process is releasing a valid amount of units
     if(units < 0 || units > pcbArray[pid].resources[rid]) {
-        std::cerr << "Invalid number of units released." << std::endl;
         return false;
     }
-
+    
     RCB& resource = rcbArray[rid];
     resource.available += units;
     pcbArray[pid].resources[rid] -= units;
-
     // Check if there are any processes waiting for the resource
-    for(auto it = resource.waitList.begin(); it != resource.waitList.end(); it++) {
-        if(resource.available >= it->second) {
+    auto it = resource.waitList.begin();
+    while (it != resource.waitList.end()) {
+        if (resource.available >= it->second) {
             int waitingProcess = it->first;
             resource.available -= it->second;
             pcbArray[waitingProcess].resources[rid] = it->second;
             pcbArray[waitingProcess].state = 1; // Assuming state 1 is ready
             readyList.insert(pcbArray[waitingProcess].priority, waitingProcess);
-            resource.waitList.erase(it);
+
+            // Safely erase and move to the next iterator
+            it = resource.waitList.erase(it);
+        } else {
+            ++it;
         }
     }
-
     // we call the scheduler because there might be a higher priority process that was blocked
     scheduler();
     return true;

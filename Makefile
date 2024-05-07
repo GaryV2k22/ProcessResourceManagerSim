@@ -1,6 +1,6 @@
 CXX = g++
 
-CXXFLAGS = -Wall -Iheaders
+CXXFLAGS = -Wall -Iheaders 
 
 LDFLAGS =
 

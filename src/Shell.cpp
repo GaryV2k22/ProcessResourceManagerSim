@@ -25,9 +25,9 @@ void Shell::parseCommand(const std::string& command) {
         } else {
             int new_pid = os_manager.create(priority);
             if (new_pid >= 0) {
-                std::cout << "* Process " << new_pid << " created\n";
+                std::cout << os_manager.getCurrentProcess() << " ";
             } else {
-                std::cout << "* Error in process creation\n";
+                std::cout << "-1 ";
             }
         }
     } else if (cmd == "de") {
@@ -35,10 +35,10 @@ void Shell::parseCommand(const std::string& command) {
         if (!(iss >> pid)) {
             std::cout << "* Error: Process ID must be specified\n";
         } else {
-            if (os_manager.destroy(pid)) {
+            if (os_manager.destroy(pid, os_manager.getCurrentProcess())) {
                 std::cout << "* Process " << pid << " and its descendants destroyed\n";
             } else {
-                std::cout << "* Error: Failed to destroy process " << pid << "\n";
+                std::cout << "-1 ";
             }
         }
     } else if (cmd == "rq") {
@@ -47,9 +47,9 @@ void Shell::parseCommand(const std::string& command) {
             std::cout << "* Error: Resource ID and units must be specified\n";
         } else {
             if (os_manager.request(os_manager.getCurrentProcess(), rid, units)) {
-                std::cout << "* Resource " << rid << " allocated\n";
+                std::cout << os_manager.getCurrentProcess() << " ";
             } else {
-                std::cout << "* Error in resource allocation\n";
+                std::cout << "-1 ";
             }
         }
     } else if (cmd == "rl") {
@@ -58,9 +58,9 @@ void Shell::parseCommand(const std::string& command) {
             std::cout << "* Error: Resource ID and units must be specified\n";
         } else {
             if (os_manager.release(os_manager.getCurrentProcess(), rid, units)) {
-                std::cout << "* Resource " << rid << " released\n";
+                std::cout << os_manager.getCurrentProcess() << " ";
             } else {
-                std::cout << "* Error in resource release\n";
+                std::cout << "-1 ";
             }
         }
     } else if (cmd == "to") {
@@ -72,9 +72,9 @@ void Shell::parseCommand(const std::string& command) {
             std::cout << "* Error: Initialization parameters must be specified\n";
         } else {
             if (os_manager.init(n, u0, u1, u2, u3)) {
-                std::cout << "* System initialized with parameters\n";
+                std::cout << os_manager.getCurrentProcess() << " ";
             } else {
-                std::cout << "* Error in system initialization\n";
+                std::cout << "-1 ";
             }
         }
     } else if (cmd == "id") {

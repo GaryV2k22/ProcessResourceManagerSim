@@ -27,11 +27,17 @@ public:
     bool init(int n, int u0, int u1, int u2, int u3); // done!
     bool init_default(); // done!
 
+
+
+    // all of these could fail
     bool create(int priority);
-    bool destroy(int pid);
+    bool destroy(int pid, int actingCurrentProcess);
     bool request(int pid, int rid, int units);
     bool release(int pid, int rid, int units);
 
+
+
+    // will not fail
     void timeout();
     void scheduler();
 
